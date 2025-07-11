@@ -61,7 +61,7 @@ const Signup =()=>{
     <Header />
     <Footer />
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Welcome Back!!! </h2>
+        <h2 style={{fontSize:"2em", textAlign:"center"}} > Welcome to Splitwise!!! </h2>
         <form onSubmit={formHandle} className="space-y-6">
           <div>
             <label htmlFor="username" style={{  width:"9%" , height:"50px", textAlign:"center", lineHeight:"45px",fontSize:"1.3em", fontStyle:"bold"}}>Username: </label>
@@ -85,3 +85,4 @@ const Signup =()=>{
 };
 
 export default Signup;
+
