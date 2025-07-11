@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
-// import { connectDB } from './mongo.js';
+
 import bcrypt from 'bcrypt';
 import Joi from 'joi';
 import mongoose, { trusted } from 'mongoose';
@@ -14,7 +14,7 @@ const JWTKey=process.env.JWTKey
 app.use(express.json());
 app.use(cors());
 
-// await connectDB( );
+
 mongoose.connect('mongodb://localhost/billsplit')
 .then(() => console.log("Connected to MongoDB"))
 .catch(err => console.error("MongoDB connection failed:", err));
@@ -47,7 +47,8 @@ const userSchema= new mongoose.Schema({
         default: ["https://static.wikia.nocookie.net/characters/images/a/a5/Latest_%2810%29.jpg"],
     }
 });
-//this makes it easy to remove the username when account is deleted
+
+
 userSchema.pre('deleteOne',{ document: true, query: false }, async function (next){
     const username_remove=this.username;
      try {
@@ -119,7 +120,7 @@ function verify(req,res,next){
     }
     jwt.verify(token, JWTKey,(erro,decoded)=>{
         if (erro){
-            return res.status(403).json({message: 'Bro! Who you tryna hack?!'});
+            return res.status(403).json({message: 'Token expired!'});
         }
         req.user=decoded;
         next();
@@ -142,7 +143,7 @@ app.post('/signup',async(req,res)=>{
         });
     }
     let {username,password}=req.body;
-    // username=username.toLowerCase();
+    
     const user_exist=await User.findOne({username});
     if (user_exist){
         return res.send({
@@ -150,7 +151,7 @@ app.post('/signup',async(req,res)=>{
             message:'This username exists. Pls try another name...'
         });
     }
-     //change salt rounds when necessary
+    
     let hashed_password=await bcrypt.hash(password,10);
     let user=new User({username,password:hashed_password});
     await user.save();
@@ -165,7 +166,7 @@ app.post('/signup',async(req,res)=>{
 //login account
 app.post('/login',async (req,res)=>{
     let {username,password}=req.body;
-    // username=username.toLowerCase();
+    
     const user_cred=await User.findOne({username});
     if (!user_cred){
         return res.send({
@@ -243,6 +244,33 @@ app.post('/delete',verify, async(req,res)=>{
     res.json({success:true});
 })
 
+
+// app.post('/update_percent',verify, async(req,res)=>{
+//     const {username,current_group,category, amount,member,percent}=req.body;
+//     if (!username || !current_group || !member ||! percent){
+//         return res.status(400).json({message:"Missing details"});
+//     }
+//     const result = await Group.updateOne(
+//             {
+//                 groupAdmin: username, // Assuming 'username' from req.body is the groupAdmin
+//                 groupName: current_group,
+//                 "expenses.description": category // This is the key to target the specific expense
+//             },
+//             {
+//                 // Use the positional operator '$' to update the matched element in the 'expenses' array
+//                 // and then $push into its 'splits' array.
+//                 $push: {
+//                     "expenses.$.splits": {
+//                         username: member, // The username for the split
+//                         amount: percent   // The amount for this split (assuming 'percent' is the actual amount)
+//                     }
+//                 }
+//             }
+//         );
+    
+//     res.json({success:true});
+// })
+
 app.listen(port,()=>{
     console.log(`Working on port ${port}.....`);
 });
@@ -259,33 +287,15 @@ app.post('/friend',verify,async(req,res)=>{
 
 app.post('/friendlist',verify,async(req,res)=>{
     const {username}=req.body;
-    // if (!username){
-    //     return res.status(400).json({message:"Missing username"});
-    // }
+    
     const users=await User.findOne({username});
     if (!users) return res.status(404).send({message:"User not found"})
     return res.send(users.friends);
 })
 
-// app.post('/getgroups',verify,async(req,res)=>{
-//     const {username}=req.body;
-//     // if (!username){
-//     //     return res.status(400).json({message:"Missing username"});
-//     // }
-//     const users=await User.findOne({username});
-//     if (!users) return res.status(404).send({message:"User not found"})
-//     const groups=users.groups;
-//     let array;
-//     groups.forEach((gro)=>
-//     {
-//         const details=groups.findOne({groupId:gro});
-//         array.push(details)
-//     })
-//     return res.send(array);
-// })
+
 app.post('/getgroups',verify, async (req, res) => {
-    // In a real application, you'd typically get the username from an authenticated user's session/token
-    // rather than directly from the request body for security.
+
     const { username } = req.body;
     // console.log({username});
     if (!username) {
@@ -299,40 +309,38 @@ app.post('/getgroups',verify, async (req, res) => {
             return res.status(404).json({ message: "User not found." });
         }
 
-        // Ensure user.groups is an array, even if it's null or undefined
+   
         const groupIds = user.groups || [];
         // console.log(groupIds);
 
-        // Initialize an empty array to store the details of each group
+ 
         const groupDetails = [];
 
-        // Iterate over each groupId found in the user's groups array
-        // Use Promise.all to fetch all group details concurrently for better performance
+
         const groupPromises = groupIds.map(async (groupId) => {
-            // Assuming 'groupId' in user.groups is the MongoDB '_id' of the Group document.
-            // If it's a custom string ID, use `Group.findOne({ customIdField: groupId })`
+      
             const group = await Group.findOne({groupId});
             // console.log(group);
             return group;
-             // This will be null if a group is not found
+
         });
 
-        // Wait for all group promises to resolve
+
         const resolvedGroups = await Promise.all(groupPromises);
 
-        // Filter out any null values (groups not found) and push valid ones
+
         resolvedGroups.forEach(group => {
             if (group) {
                 groupDetails.push(group);
             }
         });
         console.log(groupDetails);
-        // Send the array of group details back to the client
+ 
         return res.status(200).json({groupDetails});
 
     } catch (error) {
         console.error("Error in /getgroups:", error);
-        // Send a 500 status for internal server errors
+
         return res.status(500).json({ message: "Internal server error." });
     }
 });
@@ -440,25 +448,44 @@ app.post('/deletegroup',verify, async(req,res)=>{
     }
 });
 
+app.post('/updateprofile',verify, async(req,res)=>{
+    const {username,newusername,password}=req.body;
+    if (!username || !newusername || !password){
+        return res.status(404).send({message:"Missing credentials"});
+    }
+    try{
+        const hashedPw=await bcrypt.hash(password,10)
+        await User.updateOne(
+            {username:username},
+            {$set: {username:newusername,password:hashedPw}}
+        );
+        
+        
+        res.send({success:true, message:"updated details"})
+    }catch(err){
+        res.status(500).send({success:false,message:'Error'})
+    }
+});
+
+
 app.post('/creategroup',verify, async(req,res)=>{
     const {groupName,groupAdmin,members}=req.body;
-    //below function is to create a slight delay so that 
-    //there arent too many requests to database
+   
     const delay =ms => new Promise(resolve => setTimeout(resolve,ms));
     if (!groupAdmin||!groupName||!members){
         return res.status(400).json({sucess:false,message:"Missing values"});
     }
-    // Changed this line: Extract only the usernames from the members array of objects
+    
     const usernames = members.map(m => m.username); 
     let groupId=''
-    while(true){ // Changed 1 to true for standard practice
+    while(true){ 
         groupId=Math.random().toString().substring(2,12);
         if (!await Group.findOne({groupId})){
             break;
         }
-        await delay(10); // Added await here to ensure delay
+        await delay(10); 
     }
-    // Changed this line: Pass the 'usernames' array (array of strings) to the Group model
+
     await new Group({groupId,groupName,groupAdmin,members: usernames}).save(); 
     for (let i=0; i<usernames.length;i++){
         await User.updateOne(
@@ -468,12 +495,10 @@ app.post('/creategroup',verify, async(req,res)=>{
     }
     await User.updateOne(
             {username: groupAdmin},
-            // Fixed typo: $addtoSet -> $addToSet
-            // Changed 'groupName' to 'groupId' for consistency with other members' group tracking
             {$addToSet: {groups: groupId}} 
         );
 
-    res.json({success:true, message: "Group created successfully!"}); // Added a success message
+    res.json({success:true, message: "Group created successfully!"}); 
 })
 
 
