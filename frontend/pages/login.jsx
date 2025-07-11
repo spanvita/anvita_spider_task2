@@ -66,6 +66,8 @@ const Login =()=>{
             style={{height:"45px",backgroundColor:"rgba(18, 18, 195)", color:"white", fontFamily:"'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif", textAlign:"center",fontSize:"1.3em", fontStyle:"bold", width:"100%", borderRadius:"10px"}}>
             Login 
           </button>
+          <a href="/forgot_password"style={{color:"rgb(165, 42, 42)",textDecoration:"underline"}}>Forgot password</a>
+          <br></br>
           <label style={{fontSize:"1.3em", fontStyle:"bold"}}>Don't have an account?    </label>
           <button
             type="button" onClick={()=> Navigate("/signup")}
